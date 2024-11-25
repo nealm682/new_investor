@@ -1,6 +1,17 @@
 # Options Assessment - Robinhood
 
-Options Assessment is a Python-based project that allows users to analyze stock options, including evaluating their Greeks, analyzing historical price changes, and calculating potential profits or losses based on percentage changes in stock price. It uses the Robinhood API for fetching stock and options data.
+Options Assessment is a Python-based project that allows users to analyze stock options, including evaluating their Greeks, analyzing historical price changes, and calculating potential profits or losses based on percentage changes in stock price. It uses the Robinhood API for fetching stock and options data.  
+
+## SPECIAL NOTE: Your Robinhood credentials are not saved. 
+
+## Note from developer of robin-stocks
+These functions make real time calls to your Robinhood account. Unlike in the app, there are no warnings when you are about to buy, sell, or cancel an order. It is up to YOU to use these commands responsibly.
+
+## Framework
+
+I configured code using a wrapper called robin-stocks. You can reference robin-stocks at:
+I also did some research to check popularity and package health score: https://snyk.io/advisor/python/robin-stocks
+
 
 ## Features
 
