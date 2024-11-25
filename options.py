@@ -82,7 +82,19 @@ def fetch_and_evaluate_greeks(symbol, expiration_date, option_type="call"):
         otm_options = [opt for opt in options if float(opt['strike_price']) > current_price]
 
         # Select 2 closest in-the-money and 2 closest out-of-the-money options
-        selected_options = (itm_options[-2:] if itm_options else []) + (otm_options[:2] if otm_options else [])
+        #selected_options = (itm_options[-2:] if itm_options else []) + (otm_options[:2] if otm_options else [])
+        # Select the first in-the-money option
+        first_itm_option = itm_options[-1] if itm_options else None
+
+        # Select the first out-of-the-money option
+        first_otm_option = otm_options[0] if otm_options else None
+
+        # Combine selected options
+        selected_options = []
+        if first_itm_option:
+            selected_options.append(first_itm_option)
+        if first_otm_option:
+            selected_options.append(first_otm_option)
 
         print(f"\nFiltered {option_type.capitalize()} Options for {symbol} (Expiration: {expiration_date}):")
         print("=" * 60)
