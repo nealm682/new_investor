@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 import os
 
 selected_options = []
+symbol = ""
+profit_or_loss = 0
+ask_price = 0
 
 # Load environment variables from .env file
 load_dotenv()
@@ -263,6 +266,7 @@ def analyze_daily_percentage_changes_90_days(historical_data):
     except Exception as e:
         return {"error": str(e)}
 
+
 def calculate_option_profit_or_loss(option_contract, percent_change):
     """
     Calculates the profit or loss for an options contract based on a given percentage change in the underlying stock price.
@@ -276,62 +280,78 @@ def calculate_option_profit_or_loss(option_contract, percent_change):
     """
     try:
         # Extract necessary data from the option contract
-        ask_price = float(option_contract.get('ask_price'))  # Price to purchase the option
+        ask_price = float(option_contract.get('ask_price'))  # Price to purchase the option per share
         delta = float(option_contract.get('delta', 0))       # Delta of the option
         current_price = float(option_contract.get('current_price'))  # Current stock price
-        
+
         if delta == 0:
             print("Delta is missing or zero; results may not be accurate.")
         
         # Simulate stock price change
         stock_price_change = current_price * (percent_change / 100)
         
-        # Calculate expected option price change using delta
-        option_price_change = delta * stock_price_change * 100  # Scaled for contract (100 shares)
+        # Calculate expected option price change per share using delta
+        option_price_change_per_share = delta * stock_price_change
+        
+        # Calculate option price change per contract (100 shares)
+        option_price_change_per_contract = option_price_change_per_share * 100
         
         # Calculate profit or loss
-        profit_or_loss = option_price_change  # Profit is directly proportional to the delta impact
+        profit_or_loss = option_price_change_per_contract
+        print(f"Debug: profit_or_loss = {profit_or_loss}")
 
         return {
             "ask_price": ask_price * 100,  # Total cost of the contract
             "percent_change": percent_change,
             "stock_price_change": round(stock_price_change, 2),
-            "option_price_change": round(option_price_change, 2),
+            "option_price_change_per_share": round(option_price_change_per_share, 2),
+            "option_price_change_per_contract": round(option_price_change_per_contract, 2),
             "profit_or_loss": round(profit_or_loss, 2)
         }
-
+        
     except Exception as e:
         print(f"Error calculating option profit or loss: {e}")
         return None
 
 
-def display_option_profit_or_loss(selected_options, percent_change):
-    """
-    Displays the profit or loss for the first in-the-money option contract based on the percentage change.
 
-    Parameters:
-        selected_options (list): List of options contracts (filtered ITM and OTM).
-        percent_change (float): The percentage change in the underlying stock price.
-
-    Returns:
-        None
-    """
+def display_option_profit_or_loss(selected_options, percent_change, symbol):
     if not selected_options or len(selected_options) == 0:
         print("No options available to calculate profit or loss.")
         return
 
-    # Take the first in-the-money option
+    current_price = fetch_current_price(symbol)
+    if current_price is None:
+        print(f"Failed to fetch the current stock price for {symbol}.")
+        return
+
     itm_option = selected_options[0]
-    itm_option['current_price'] = 349.16  # Example: Replace this with the actual stock price from your API
+    itm_option['current_price'] = current_price
     result = calculate_option_profit_or_loss(itm_option, percent_change)
-    
+
     if result:
+        ask_price = result['ask_price']
+        profit_or_loss = result['profit_or_loss']
+
+        # Debug statements
+        print(f"Debug: ask_price = {ask_price}")
+        print(f"Debug: profit_or_loss = {profit_or_loss}")
+
         print("\nOption Profit or Loss Analysis:")
-        print(f"  Ask Price (Contract Cost): ${result['ask_price']}")
+        print(f"  Ask Price (Contract Cost): ${ask_price}")
         print(f"  Percentage Change: {result['percent_change']}%")
         print(f"  Stock Price Change: ${result['stock_price_change']}")
-        print(f"  Option Price Change: ${result['option_price_change']}")
-        print(f"  Profit or Loss: ${result['profit_or_loss']}\n")
+        print(f"  Option Price Change per Share: ${result['option_price_change_per_share']}")
+        print(f"  Option Price Change per Contract: ${result['option_price_change_per_contract']}")
+        print(f"  Profit or Loss for the contract: ${profit_or_loss}")
+
+        # Calculate Total Return Percentage
+        if ask_price == 0:
+            print("Cannot calculate total return percentage because ask price is zero.")
+        else:
+            total_return_percentage = (profit_or_loss / ask_price) * 100
+            print(f"  Total Return Percentage: {round(total_return_percentage, 2)}%\n")
+
 
 
 
@@ -377,7 +397,11 @@ def main():
             print(f"  Average Negative Change: {analysis['average_negative_change']}%")
 
         percent_change = 1.0
-        display_option_profit_or_loss(selected_options, percent_change)
+        display_option_profit_or_loss(selected_options, percent_change, symbol)
+
+
+
+
 
     else:
         print(f"No historical data available for {symbol}.")
