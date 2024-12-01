@@ -15,7 +15,7 @@ Using expiration date: 2025-01-17
 Fetching call options for EME expiring on 2025-01-17...
 Current Price of EME: 510.815
 
-Filtered Call Options for EME (Expiration: 2025-01-17):
+Filtering the first Call Options 'in the money' for EME (Expiration: 2025-01-17):
 ============================================================
 Strike Price: 510.0000
   Delta: 0.549371

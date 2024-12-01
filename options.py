@@ -98,7 +98,7 @@ def fetch_and_evaluate_greeks(symbol, expiration_date, option_type="call"):
         if first_otm_option:
             selected_options.append(first_otm_option)
 
-        print(f"\nFiltered {option_type.capitalize()} Options for {symbol} (Expiration: {expiration_date}):")
+        print(f"\nFiltering the first {option_type.capitalize()} Options 'in the money' for {symbol} (Expiration: {expiration_date}):")
         print("=" * 60)
 
         # Fetch and display options and Greeks
