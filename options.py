@@ -352,48 +352,11 @@ def display_option_profit_or_loss(selected_options, percent_change, symbol):
         return None
 
 
-'''
-def display_option_profit_or_loss(selected_options, percent_change, symbol):
-    if not selected_options or len(selected_options) == 0:
-        print("No options available to calculate profit or loss.")
-        return
 
-    current_price = fetch_current_price(symbol)
-    if current_price is None:
-        print(f"Failed to fetch the current stock price for {symbol}.")
-        return
 
-    itm_option = selected_options[0]
-    itm_option['current_price'] = current_price
-    result = calculate_option_profit_or_loss(itm_option, percent_change)
-
-    if result:
-        ask_price = result['ask_price']
-        profit_or_loss = result['profit_or_loss']
-
-        # Debug statements
-        #print(f"Debug: ask_price = {ask_price}")
-        #print(f"Debug: profit_or_loss = {profit_or_loss}")
-
-        print("\nOption Profit or Loss Analysis:")
-        print(f"  Ask Price (Contract Cost): ${ask_price}")
-        print(f"  Percentage Change: {result['percent_change']}%")
-        print(f"  Stock Price Change: ${result['stock_price_change']}")
-        print(f"  Option Price Change per Share: ${result['option_price_change_per_share']}")
-        print(f"  Option Price Change per Contract: ${result['option_price_change_per_contract']}")
-        print(f"  Profit or Loss for the contract: ${profit_or_loss}")
-
-        # Calculate Total Return Percentage
-        if ask_price == 0:
-            print("Cannot calculate total return percentage because ask price is zero.")
-        else:
-            total_return_percentage = (profit_or_loss / ask_price) * 100
-            print(f"  Total Return Percentage: {round(total_return_percentage, 2)}%\n")
-'''
-
-def get_put_call_ratio_robinhood(symbol, expiration_date):
+def get_put_call_ratio_yfinance(symbol, expiration_date):
     """
-    Calculates the put/call ratio for a given ticker and expiration date based on volume.
+    Calculates the put/call ratio for a given ticker and expiration date using yfinance.
 
     Parameters:
         symbol (str): The stock ticker symbol (e.g., "AAPL").
@@ -403,41 +366,36 @@ def get_put_call_ratio_robinhood(symbol, expiration_date):
         float: The put/call ratio.
     """
     try:
-        # Fetch all call options
-        calls = r.options.find_options_by_expiration(
-            inputSymbols=symbol,
-            expirationDate=expiration_date,
-            optionType='call'
-        )
+        # Fetch the options chain for the specified expiration date
+        ticker = yf.Ticker(symbol)
+        options_chain = ticker.option_chain(expiration_date)
 
-        # Fetch all put options
-        puts = r.options.find_options_by_expiration(
-            inputSymbols=symbol,
-            expirationDate=expiration_date,
-            optionType='put'
-        )
+        # Extract calls and puts DataFrames
+        calls = options_chain.calls
+        puts = options_chain.puts
 
-        # Sum volume for calls and puts
-        total_call_volume = sum(float(call.get('volume', 0)) for call in calls)
-        total_put_volume = sum(float(put.get('volume', 0)) for put in puts)
+        # Sum the volume for calls and puts
+        total_call_volume = calls['volume'].fillna(0).sum()
+        total_put_volume = puts['volume'].fillna(0).sum()
 
-        # Calculate the put/call ratio
-        # Fetch put/call ratio using Robinhood API
-        
-        #put_call_ratio = get_put_call_ratio_robinhood(symbol, expiration_date)
-        put_call_ratio = total_put_volume / total_call_volume if total_call_volume != 0 else None
+        # Debugging statements
+        print(f"Total Call Volume: {total_call_volume}")
+        print(f"Total Put Volume: {total_put_volume}")
 
+        # Calculate the Put/Call Ratio
+        if total_call_volume == 0:
+            print("Call volume is zero. Cannot calculate Put/Call Ratio.")
+            return None
 
-        if put_call_ratio is None:
-            print("Warning: Failed to fetch Put/Call Ratio.")
-            put_call_ratio = "N/A"  # Assign a default value if fetching fails
-
-        print(f"\nPut/Call Ratio for {symbol} on {expiration_date}: {put_call_ratio:.2f}")
+        put_call_ratio = total_put_volume / total_call_volume
+        print(f"Put/Call Ratio for {symbol} on {expiration_date}: {put_call_ratio:.2f}")
         return put_call_ratio
 
     except Exception as e:
-        print(f"Error calculating put/call ratio for {symbol}: {e}")
+        print(f"Error calculating put/call ratio for {symbol} using yfinance: {e}")
         return None
+
+
 
 
 def get_vix_value():
@@ -472,20 +430,44 @@ def sentiment_analysis(put_call_ratio, vix_value):
     insights = []
 
     # Analyze put/call ratio
+    # Analyze put/call ratio
     if put_call_ratio is not None:
-        if put_call_ratio > 1:
-            insights.append("Market sentiment appears bearish based on the put/call ratio.")
-        elif put_call_ratio < 1:
-            insights.append("Market sentiment appears bullish based on the put/call ratio.")
-        else:
-            insights.append("Market sentiment is neutral based on the put/call ratio.")
+        if put_call_ratio < 1.0:
+            insights.append(
+                f"The put/call ratio of {put_call_ratio:.2f} suggests bullish sentiment, indicating that more call options are traded than puts, reflecting optimism among investors."
+            )
+        elif 1.0 <= put_call_ratio <= 1.5:
+            insights.append(
+                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral to mildly bearish sentiment, with a relatively balanced demand for puts and calls."
+            )
+        elif 1.5 < put_call_ratio <= 2.0:
+            insights.append(
+                f"The put/call ratio of {put_call_ratio:.2f} suggests bearish sentiment, indicating more put options traded than calls, reflecting caution or a hedging behavior among investors."
+            )
+        else:  # Above 2.0
+            insights.append(
+                f"The put/call ratio of {put_call_ratio:.2f} indicates strong bearish sentiment, suggesting heightened fear or hedging activity, with a significant preference for puts over calls."
+            )
 
     # Analyze VIX value
     if vix_value is not None:
-        if vix_value > 20:  # Thresholds can be adjusted based on market conditions
-            insights.append("High volatility expected in the market based on the VIX.")
-        else:
-            insights.append("Low to moderate volatility expected in the market based on the VIX.")
+        if vix_value < 12:
+            insights.append(
+                f"The VIX value of {vix_value:.2f} indicates low market volatility, reflecting complacency or confidence among market participants."
+            )
+        elif 12 <= vix_value <= 20:
+            insights.append(
+                f"The VIX value of {vix_value:.2f} is within the normal range, suggesting moderate volatility and typical market conditions."
+            )
+        elif 20 < vix_value <= 30:
+            insights.append(
+                f"The VIX value of {vix_value:.2f} indicates elevated market volatility, reflecting uncertainty or potential market stress."
+            )
+        else:  # Above 30
+            insights.append(
+                f"The VIX value of {vix_value:.2f} signals extreme market volatility, indicating significant fear and potential market turmoil."
+            )
+
 
     # Combine insights
     print("\nSentiment Analysis:")
@@ -498,15 +480,59 @@ def get_ai_analysis(summary_data):
     try:
         # Construct the prompt
         messages = [
-            {"role": "system", "content": "You are a financial analyst."},
-            {"role": "user", "content": f"Based on the following data, provide a summary and your opinion:\n\n{summary_data}"}
+            {
+                "role": "system",
+                "content": """You are a financial analyst specializing in options and market sentiment analysis. 
+                Interpret the data provided using the following context and guidelines:
+
+                - **Put/Call Ratio**:
+                - **Below 1.0**: Bullish sentiment; more call options traded, indicating optimism.
+                - **1.0 to 1.5**: Neutral to mildly bearish sentiment.
+                - **Above 1.5**: Bearish sentiment; more put options traded, indicating caution or fear.
+
+                - **VIX Value**:
+                - **Below 12**: Low market volatility, complacency.
+                - **12 to 20**: Normal market conditions, moderate volatility.
+                - **Above 20**: Elevated volatility, uncertainty.
+                - **Above 30**: Extreme fear and market stress.
+
+                - **Options Greeks**:
+                - **Delta**: Indicates sensitivity to price changes; close to 1.0 suggests high correlation with stock movements, while near 0.5 represents at-the-money options. Highlight significant deviations.
+                - **Gamma**: Measures Delta sensitivity; high Gamma signals sharp changes in Delta with stock movement. Mention if unusually high.
+                - **Theta**: Reflects time decay; negative Theta is standard but significant rates can imply steep value loss over time. Highlight unusual cases.
+                - **Vega**: Reflects sensitivity to volatility changes; high Vega can signal volatility-driven value shifts. Mention only if it significantly impacts decision-making.
+
+                - **Historical Stock Performance**:
+                - Assess the consistency and volatility of stock returns over the observed period.
+                - Highlight stocks with more positive trading days and stable gains as stronger candidates, and flag high-volatility stocks for caution.
+
+                Use these ranges and guidelines to ground your interpretation and provide a well-reasoned summary. 
+                Highlight potential insights or risks based on the data trends and explain how the numbers align with broader market conditions or stock-specific sentiment.
+
+                Your task is to assess whether the presented options contract represents a favorable investment opportunity. 
+                Provide an expert opinion with actionable insights to guide decision-making. Focus on whether the data supports a favorable risk/reward profile."""
+            },
+            {
+                "role": "user",
+                "content": f"Based on the following data, evaluate the option and provide your expert opinion:\n\n{summary_data}\n\n"
+                        "Interpret the Greeks only if they stand out or are unusual. For example:\n"
+                        "- Delta: Highlight only if it significantly affects price sensitivity or risk.\n"
+                        "- Gamma: Mention if it indicates sharp changes in Delta.\n"
+                        "- Theta: Discuss only if the rate of time decay is extreme or negligible.\n"
+                        "- Vega: Address only if the option's value is highly sensitive to volatility changes.\n\n"
+                        "For Put/Call ratio and VIX, provide market sentiment insights. For historical price performance, "
+                        "comment on consistency and volatility of returns. Finally, make a recommendation on whether this option seems "
+                        "like a good investment based on the overall data."
+            }
         ]
+
+
 
         # Create the chat completion using the client
         response = client.chat.completions.create(
             model="gpt-4",  # Use "gpt-3.5-turbo" or other supported models if "gpt-4" is unavailable
             messages=messages,
-            max_tokens=300,
+            max_tokens=600,
             temperature=0.7
         )
         #print(response)
@@ -578,7 +604,7 @@ def main():
         display_option_profit_or_loss(selected_options, percent_change, symbol)
 
         # Fetch Put/Call Ratio
-        put_call_ratio = get_put_call_ratio_robinhood(symbol, expiration_date)
+        put_call_ratio = get_put_call_ratio_yfinance(symbol, expiration_date)
         if put_call_ratio is None:
             print("Failed to fetch Put/Call Ratio.")
         else:
