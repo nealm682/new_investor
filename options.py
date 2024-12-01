@@ -2,17 +2,27 @@ import robin_stocks.robinhood as r
 import pandas as pd
 from dotenv import load_dotenv
 import os
+import yfinance as yf
+import openai
+import re
+
+
 
 selected_options = []
 symbol = ""
 profit_or_loss = 0
 ask_price = 0
+# Initialize variables with default values
+put_call_ratio = "N/A"  # Default if not fetched
+vix_value = "N/A"       # Default if not fetched
+profit_loss_result = None  # Default if no profit/loss is calculated
 
 # Load environment variables from .env file
 load_dotenv()
 
 USERNAME = os.getenv("ROBINHOOD_USERNAME")
 PASSWORD = os.getenv("ROBINHOOD_PASSWORD")
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def login_to_robinhood():
     """
@@ -26,17 +36,6 @@ def login_to_robinhood():
         print(f"Failed to log in: {e}")
         return None
 
-def login_to_robinhood():
-    """
-    Logs into the Robinhood account using username and password.
-    """
-    try:
-        login = r.login(username=USERNAME, password=PASSWORD)
-        print("Login successful.")
-        return login
-    except Exception as e:
-        print(f"Failed to log in: {e}")
-        return None
 
 def fetch_current_price(symbol):
     """
@@ -141,7 +140,7 @@ def fetch_and_evaluate_greeks(symbol, expiration_date, option_type="call"):
         print(f"Error fetching options data: {e}")
 
 def get_expiration_date_for_month(symbol, month):
-    """
+    """ 
     Fetches expiration dates for the given ticker and filters them for the specified month.
     Presents the user with letter-based options to select an expiration date.
     """
@@ -298,7 +297,7 @@ def calculate_option_profit_or_loss(option_contract, percent_change):
         
         # Calculate profit or loss
         profit_or_loss = option_price_change_per_contract
-        print(f"Debug: profit_or_loss = {profit_or_loss}")
+        #print(f"Debug: profit_or_loss = {profit_or_loss}")
 
         return {
             "ask_price": ask_price * 100,  # Total cost of the contract
@@ -314,7 +313,46 @@ def calculate_option_profit_or_loss(option_contract, percent_change):
         return None
 
 
+def display_option_profit_or_loss(selected_options, percent_change, symbol):
+    if not selected_options or len(selected_options) == 0:
+        print("No options available to calculate profit or loss.")
+        return None
 
+    current_price = fetch_current_price(symbol)
+    if current_price is None:
+        print(f"Failed to fetch the current stock price for {symbol}.")
+        return None
+
+    itm_option = selected_options[0]
+    itm_option['current_price'] = current_price
+    result = calculate_option_profit_or_loss(itm_option, percent_change)
+
+    if result:
+        ask_price = result['ask_price']
+        profit_or_loss = result['profit_or_loss']
+
+        print("\nOption Profit or Loss Analysis:")
+        print(f"  Ask Price (Contract Cost): ${ask_price}")
+        print(f"  Percentage Change: {result['percent_change']}%")
+        print(f"  Stock Price Change: ${result['stock_price_change']}")
+        print(f"  Option Price Change per Share: ${result['option_price_change_per_share']}")
+        print(f"  Option Price Change per Contract: ${result['option_price_change_per_contract']}")
+        print(f"  Profit or Loss for the contract: ${profit_or_loss}")
+
+        # Calculate Total Return Percentage
+        if ask_price == 0:
+            print("Cannot calculate total return percentage because ask price is zero.")
+        else:
+            total_return_percentage = (profit_or_loss / ask_price) * 100
+            print(f"  Total Return Percentage: {round(total_return_percentage, 2)}%\n")
+
+        # Return the result for use in summary_data
+        return result
+    else:
+        return None
+
+
+'''
 def display_option_profit_or_loss(selected_options, percent_change, symbol):
     if not selected_options or len(selected_options) == 0:
         print("No options available to calculate profit or loss.")
@@ -334,8 +372,8 @@ def display_option_profit_or_loss(selected_options, percent_change, symbol):
         profit_or_loss = result['profit_or_loss']
 
         # Debug statements
-        print(f"Debug: ask_price = {ask_price}")
-        print(f"Debug: profit_or_loss = {profit_or_loss}")
+        #print(f"Debug: ask_price = {ask_price}")
+        #print(f"Debug: profit_or_loss = {profit_or_loss}")
 
         print("\nOption Profit or Loss Analysis:")
         print(f"  Ask Price (Contract Cost): ${ask_price}")
@@ -351,8 +389,138 @@ def display_option_profit_or_loss(selected_options, percent_change, symbol):
         else:
             total_return_percentage = (profit_or_loss / ask_price) * 100
             print(f"  Total Return Percentage: {round(total_return_percentage, 2)}%\n")
+'''
+
+def get_put_call_ratio_robinhood(symbol, expiration_date):
+    """
+    Calculates the put/call ratio for a given ticker and expiration date based on volume.
+
+    Parameters:
+        symbol (str): The stock ticker symbol (e.g., "AAPL").
+        expiration_date (str): The expiration date in "YYYY-MM-DD" format.
+
+    Returns:
+        float: The put/call ratio.
+    """
+    try:
+        # Fetch all call options
+        calls = r.options.find_options_by_expiration(
+            inputSymbols=symbol,
+            expirationDate=expiration_date,
+            optionType='call'
+        )
+
+        # Fetch all put options
+        puts = r.options.find_options_by_expiration(
+            inputSymbols=symbol,
+            expirationDate=expiration_date,
+            optionType='put'
+        )
+
+        # Sum volume for calls and puts
+        total_call_volume = sum(float(call.get('volume', 0)) for call in calls)
+        total_put_volume = sum(float(put.get('volume', 0)) for put in puts)
+
+        # Calculate the put/call ratio
+        # Fetch put/call ratio using Robinhood API
+        
+        #put_call_ratio = get_put_call_ratio_robinhood(symbol, expiration_date)
+        put_call_ratio = total_put_volume / total_call_volume if total_call_volume != 0 else None
 
 
+        if put_call_ratio is None:
+            print("Warning: Failed to fetch Put/Call Ratio.")
+            put_call_ratio = "N/A"  # Assign a default value if fetching fails
+
+        print(f"\nPut/Call Ratio for {symbol} on {expiration_date}: {put_call_ratio:.2f}")
+        return put_call_ratio
+
+    except Exception as e:
+        print(f"Error calculating put/call ratio for {symbol}: {e}")
+        return None
+
+
+def get_vix_value():
+    """
+    Fetches the current VIX index value using yfinance.
+
+    Returns:
+        float: The current VIX value.
+    """
+    try:
+        vix = yf.Ticker("^VIX")
+        vix_data = vix.history(period="1d")
+        current_vix = vix_data['Close'].iloc[-1]
+        print(f"\nCurrent VIX Value: {current_vix:.2f}")
+        return current_vix
+    except Exception as e:
+        print(f"Error fetching VIX value: {e}")
+        return None
+
+
+def sentiment_analysis(put_call_ratio, vix_value):
+    """
+    Analyzes sentiment indicators to provide trading insights.
+
+    Parameters:
+        put_call_ratio (float): The put/call ratio for the ticker.
+        vix_value (float): The current VIX index value.
+
+    Returns:
+        None
+    """
+    insights = []
+
+    # Analyze put/call ratio
+    if put_call_ratio is not None:
+        if put_call_ratio > 1:
+            insights.append("Market sentiment appears bearish based on the put/call ratio.")
+        elif put_call_ratio < 1:
+            insights.append("Market sentiment appears bullish based on the put/call ratio.")
+        else:
+            insights.append("Market sentiment is neutral based on the put/call ratio.")
+
+    # Analyze VIX value
+    if vix_value is not None:
+        if vix_value > 20:  # Thresholds can be adjusted based on market conditions
+            insights.append("High volatility expected in the market based on the VIX.")
+        else:
+            insights.append("Low to moderate volatility expected in the market based on the VIX.")
+
+    # Combine insights
+    print("\nSentiment Analysis:")
+    for insight in insights:
+        print(f"  - {insight}")
+
+
+# Example function to call OpenAI API
+def get_ai_analysis(summary_data):
+    try:
+        # Construct the prompt
+        messages = [
+            {"role": "system", "content": "You are a financial analyst."},
+            {"role": "user", "content": f"Based on the following data, provide a summary and your opinion:\n\n{summary_data}"}
+        ]
+
+        # Create the chat completion using the client
+        response = client.chat.completions.create(
+            model="gpt-4",  # Use "gpt-3.5-turbo" or other supported models if "gpt-4" is unavailable
+            messages=messages,
+            max_tokens=300,
+            temperature=0.7
+        )
+        #print(response)
+        # Extract and return the assistant's reply
+        ai_response = response.choices[0].message.content
+
+
+        print("\nAI Analysis:")
+        print(ai_response)
+        return ai_response
+
+    except Exception as e:
+        print(f"Error calling OpenAI API: {e}")
+        return None
 
 
 
@@ -363,10 +531,20 @@ def main():
     """
     if login_to_robinhood():
         symbol = input("Enter the stock ticker symbol: ").strip().upper()
+        while not symbol.isalpha():
+            print("Invalid symbol. Please enter a valid stock ticker symbol.")
+            symbol = input("Enter the stock ticker symbol: ").strip().upper()
+
         option_type = input("Enter the option type ('call' or 'put'): ").strip().lower()
+        while option_type not in ['call', 'put']:
+            print("Invalid option type. Please enter 'call' or 'put'.")
+            option_type = input("Enter the option type ('call' or 'put'): ").strip().lower()
 
         # Ask for month instead of full expiration date
         year_month = input("Enter the expiration month (YYYY-MM, e.g., 2025-01): ").strip()
+        while not re.match(r"\d{4}-\d{2}", year_month):
+            print("Invalid format. Please use 'YYYY-MM' format.")
+            year_month = input("Enter the expiration month (YYYY-MM, e.g., 2025-01): ").strip()
 
         # Fetch expiration dates for the selected month
         expiration_date = get_expiration_date_for_month(symbol, year_month)
@@ -398,6 +576,78 @@ def main():
 
         percent_change = 1.0
         display_option_profit_or_loss(selected_options, percent_change, symbol)
+
+        # Fetch Put/Call Ratio
+        put_call_ratio = get_put_call_ratio_robinhood(symbol, expiration_date)
+        if put_call_ratio is None:
+            print("Failed to fetch Put/Call Ratio.")
+        else:
+            print(f"Put/Call Ratio: {put_call_ratio}")
+
+        # Fetch VIX Value
+        vix_value = get_vix_value()
+        if vix_value is None:
+            print("Failed to fetch VIX Value.")
+        else:
+            print(f"VIX Value: {vix_value}")
+
+        # Prepare summary data for AI analysis
+        summary_data = f"""
+Stock Symbol: {symbol}
+Option Type: {option_type}
+Expiration Date: {expiration_date}
+
+Selected Options and Greeks:
+"""
+
+        # Include Greeks for each selected option
+        if selected_options:
+            for option in selected_options:
+                strike_price = option.get('strike_price', 'N/A')
+                delta = option.get('delta', 'N/A')
+                gamma = option.get('gamma', 'N/A')
+                theta = option.get('theta', 'N/A')
+                vega = option.get('vega', 'N/A')
+                summary_data += f"""
+Strike Price: {strike_price}
+  Delta: {delta}
+  Gamma: {gamma}
+  Theta: {theta}
+  Vega: {vega}
+"""
+
+        # Add historical analysis
+        if analysis and "error" not in analysis:
+            summary_data += f"""
+Historical Price Analysis (Last 90 Days):
+  Trading Days Analyzed: {analysis['trading_days_analyzed']}
+  Positive Days: {analysis['positive_days']}
+  Average Positive Change: {analysis['average_positive_change']}%
+  Negative Days: {analysis['negative_days']}
+  Average Negative Change: {analysis['average_negative_change']}%
+"""
+
+        # Add sentiment analysis
+        summary_data += f"""
+        Sentiment Indicators:
+        Put/Call Ratio: {put_call_ratio if put_call_ratio is not None else 'N/A'}
+        VIX Value: {vix_value if vix_value is not None else 'N/A'}
+        """
+
+        # Include profit or loss estimation
+        if profit_loss_result:
+            summary_data += f"""
+Option Profit or Loss Analysis:
+  Ask Price (Contract Cost): ${profit_loss_result['ask_price']}
+  Percentage Change: {profit_loss_result['percent_change']}%
+  Stock Price Change: ${profit_loss_result['stock_price_change']}
+  Option Price Change per Share: ${profit_loss_result['option_price_change_per_share']}
+  Option Price Change per Contract: ${profit_loss_result['option_price_change_per_contract']}
+  Profit or Loss for the Contract: ${profit_loss_result['profit_or_loss']}
+"""
+
+        # Call the AI analysis function
+        get_ai_analysis(summary_data)
 
 
 
