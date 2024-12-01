@@ -1,0 +1,61 @@
+### Example Output
+
+Below is an example of the program output when analyzing the stock options for `EME` with a call option expiring on `2025-01-17`:
+
+```plaintext
+Login successful.
+Enter the stock ticker symbol: EME
+Enter the option type ('call' or 'put'): call
+Enter the expiration month (YYYY-MM, e.g., 2025-01): 2025-01
+Available expiration dates for EME in 2025-01:
+  a) 2025-01-17
+Select an expiration date by letter: a
+Using expiration date: 2025-01-17
+
+Fetching call options for EME expiring on 2025-01-17...
+Current Price of EME: 510.815
+
+Filtered Call Options for EME (Expiration: 2025-01-17):
+============================================================
+Strike Price: 510.0000
+  Delta: 0.549371
+  Gamma: 0.006742
+  Theta: -0.280096
+  Vega: 0.726121
+
+Working on the following ticker: EME:
+
+Daily Percentage Change Analysis (Last 90 Days):
+  Trading Days Analyzed: 63
+  Positive Days: 40
+  Average Positive Change: 1.53%
+  Negative Days: 22
+  Average Negative Change: -1.13%
+
+Option Profit or Loss Analysis:
+  Ask Price (Contract Cost): $2720.0
+  Percentage Change: 1.0%
+  Stock Price Change: $5.11
+  Option Price Change per Share: $2.81
+  Option Price Change per Contract: $280.63
+  Profit or Loss for the contract: $280.63
+  Total Return Percentage: 10.32%
+
+Total Call Volume: 121.0
+Total Put Volume: 184.0
+Put/Call Ratio for EME on 2025-01-17: 1.52
+Put/Call Ratio: 1.5206611570247934
+
+Current VIX Value: 13.51
+VIX Value: 13.510000228881836
+
+AI Analysis:
+The Put/Call Ratio of 1.52 indicates a bearish sentiment, as there are more puts being traded than calls. This suggests caution among investors regarding the future performance of EME. 
+
+The VIX value of 13.51 is within the normal range, implying moderate market volatility and relatively stable conditions.
+
+Over the last 90 days, EME has had more positive trading days (40) than negative ones (22), with average positive changes of 1.53% compared to average negative changes of -1.13%. This indicates a historically strong performance.
+
+Option Greeks show a Delta of 0.549371, meaning the option price is expected to increase by $0.55 for every $1.00 increase in the underlying stock price. The Vega of 0.726121 suggests the option price will increase by $0.73 for every 1% increase in market volatility, making it sensitive to changes in market conditions.
+
+Conclusion: While EME has demonstrated strong historical performance, the bearish sentiment indicated by the Put/Call Ratio warrants caution. The decision to buy this option should consider your risk tolerance and confidence in EME's future growth.
