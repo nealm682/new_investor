@@ -264,8 +264,7 @@ def analyze_daily_percentage_changes_90_days(historical_data):
 
     except Exception as e:
         return {"error": str(e)}
-
-
+    
 def calculate_option_profit_or_loss(option_contract, percent_change):
     """
     Calculates the profit or loss for an options contract based on a given percentage change in the underlying stock price.
@@ -279,13 +278,13 @@ def calculate_option_profit_or_loss(option_contract, percent_change):
     """
     try:
         # Extract necessary data from the option contract
-        ask_price = float(option_contract.get('ask_price'))  # Price to purchase the option per share
-        delta = float(option_contract.get('delta', 0))       # Delta of the option
-        current_price = float(option_contract.get('current_price'))  # Current stock price
+        ask_price = float(option_contract.get('ask_price', 0))  # Price to purchase the option per share
+        delta = float(option_contract.get('delta', 0))          # Delta of the option
+        current_price = float(option_contract.get('current_price', 0))  # Current stock price
 
-        if delta == 0:
-            print("Delta is missing or zero; results may not be accurate.")
-        
+        if not current_price or not ask_price:
+            raise ValueError("Current price or ask price is missing or zero.")
+
         # Simulate stock price change
         stock_price_change = current_price * (percent_change / 100)
         
@@ -297,59 +296,58 @@ def calculate_option_profit_or_loss(option_contract, percent_change):
         
         # Calculate profit or loss
         profit_or_loss = option_price_change_per_contract
-        #print(f"Debug: profit_or_loss = {profit_or_loss}")
 
         return {
             "ask_price": ask_price * 100,  # Total cost of the contract
             "percent_change": percent_change,
             "stock_price_change": round(stock_price_change, 2),
             "option_price_change_per_share": round(option_price_change_per_share, 2),
-            "option_price_change_per_contract": round(option_price_change_per_contract, 2),
             "profit_or_loss": round(profit_or_loss, 2)
         }
-        
     except Exception as e:
         print(f"Error calculating option profit or loss: {e}")
         return None
 
 
-def display_option_profit_or_loss(selected_options, percent_change, symbol):
+def display_option_profit_or_loss(selected_options, percent_changes, symbol):
+    """
+    Displays the profit or loss for an options contract based on multiple percentage changes in the stock price.
+
+    Parameters:
+        selected_options (list): List of options contracts.
+        percent_changes (list): List of percentage changes to simulate (e.g., [1, 10, 20]).
+        symbol (str): The stock ticker symbol.
+
+    Returns:
+        None
+    """
     if not selected_options or len(selected_options) == 0:
         print("No options available to calculate profit or loss.")
-        return None
+        return
 
     current_price = fetch_current_price(symbol)
     if current_price is None:
         print(f"Failed to fetch the current stock price for {symbol}.")
-        return None
+        return
 
+    # Use the first in-the-money option for calculations
     itm_option = selected_options[0]
     itm_option['current_price'] = current_price
-    result = calculate_option_profit_or_loss(itm_option, percent_change)
 
-    if result:
-        ask_price = result['ask_price']
-        profit_or_loss = result['profit_or_loss']
+    # Display Ground Truth
+    print("\nOption Profit or Loss Analysis:")
+    print(f"  Current Price of Underlying Stock: ${current_price:.2f}")
+    print(f"  Current Value of the Contract: ${float(itm_option['ask_price']) * 100:.2f}\n")
 
-        print("\nOption Profit or Loss Analysis:")
-        print(f"  Ask Price (Contract Cost): ${ask_price}")
-        print(f"  Percentage Change: {result['percent_change']}%")
-        print(f"  Stock Price Change: ${result['stock_price_change']}")
-        print(f"  Option Price Change per Share: ${result['option_price_change_per_share']}")
-        print(f"  Option Price Change per Contract: ${result['option_price_change_per_contract']}")
-        print(f"  Profit or Loss for the contract: ${profit_or_loss}")
-
-        # Calculate Total Return Percentage
-        if ask_price == 0:
-            print("Cannot calculate total return percentage because ask price is zero.")
-        else:
-            total_return_percentage = (profit_or_loss / ask_price) * 100
+    # Iterate through percentage changes
+    for percent_change in percent_changes:
+        result = calculate_option_profit_or_loss(itm_option, percent_change)
+        if result:
+            print(f"Percentage Change: {result['percent_change']}%")
+            print(f"  Stock Price Change: ${result['stock_price_change']}")
+            print(f"  Profit or Loss for the Contract: ${result['profit_or_loss']}")
+            total_return_percentage = (result['profit_or_loss'] / result['ask_price']) * 100
             print(f"  Total Return Percentage: {round(total_return_percentage, 2)}%\n")
-
-        # Return the result for use in summary_data
-        return result
-    else:
-        return None
 
 
 
@@ -600,7 +598,7 @@ def main():
             print(f"  Negative Days: {analysis['negative_days']}")
             print(f"  Average Negative Change: {analysis['average_negative_change']}%")
 
-        percent_change = 1.0
+        percent_change = [1, 10, 20]
         display_option_profit_or_loss(selected_options, percent_change, symbol)
 
         # Fetch Put/Call Ratio
