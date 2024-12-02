@@ -1,6 +1,6 @@
 ### Example Output
 
-Below is an example of the program output when analyzing the stock options for `EME` with a call option expiring on `2025-01-17`:
+Below is an example of the program output when analyzing the stock options for `GEV` with a call option expiring on `2025-01-17`:
 
 Login successful.
 Enter the stock ticker symbol: GEV
