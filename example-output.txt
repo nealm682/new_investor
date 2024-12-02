@@ -2,60 +2,73 @@
 
 Below is an example of the program output when analyzing the stock options for `EME` with a call option expiring on `2025-01-17`:
 
-```plaintext
 Login successful.
-Enter the stock ticker symbol: EME
+Enter the stock ticker symbol: GEV
 Enter the option type ('call' or 'put'): call
 Enter the expiration month (YYYY-MM, e.g., 2025-01): 2025-01
-Available expiration dates for EME in 2025-01:
-  a) 2025-01-17
-Select an expiration date by letter: a
+Available expiration dates for GEV in 2025-01:
+  a) 2025-01-03
+  b) 2025-01-10
+  c) 2025-01-17
+Select an expiration date by letter: c
 Using expiration date: 2025-01-17
 
-Fetching call options for EME expiring on 2025-01-17...
-Current Price of EME: 510.815
+Fetching call options for GEV expiring on 2025-01-17...
+Current Price of GEV: 334.425
 
-Filtering the first Call Options 'in the money' for EME (Expiration: 2025-01-17):
+Filtering the first Call Options 'in the money' for GEV (Expiration: 2025-01-17):
 ============================================================
-Strike Price: 510.0000
-  Delta: 0.549371
-  Gamma: 0.006742
-  Theta: -0.280096
-  Vega: 0.726121
+Strike Price: 330.0000
+  Delta: 0.578197
+  Gamma: 0.006443
+  Theta: -0.275598
+  Vega: 0.468160
 
-Working on the following ticker: EME:
+Working on the following ticker: GEV:
 
 Daily Percentage Change Analysis (Last 90 Days):
   Trading Days Analyzed: 63
-  Positive Days: 40
-  Average Positive Change: 1.53%
-  Negative Days: 22
-  Average Negative Change: -1.13%
+  Positive Days: 38
+  Average Positive Change: 2.4%
+  Negative Days: 24
+  Average Negative Change: -1.41%
 
 Option Profit or Loss Analysis:
-  Ask Price (Contract Cost): $2720.0
-  Percentage Change: 1.0%
-  Stock Price Change: $5.11
-  Option Price Change per Share: $2.81
-  Option Price Change per Contract: $280.63
-  Profit or Loss for the contract: $280.63
-  Total Return Percentage: 10.32%
+  Current Price of Underlying Stock: $334.43
+  Current Value of the Contract: $2860.00
 
-Total Call Volume: 121.0
-Total Put Volume: 184.0
-Put/Call Ratio for EME on 2025-01-17: 1.52
-Put/Call Ratio: 1.5206611570247934
+Percentage Change: 1%
+  Stock Price Change: $3.34
+  Profit or Loss for the Contract: $193.36
+  Total Return Percentage: 6.76%
+
+Percentage Change: 10%
+  Stock Price Change: $33.44
+  Profit or Loss for the Contract: $1933.64
+  Total Return Percentage: 67.61%
+
+Percentage Change: 20%
+  Stock Price Change: $66.89
+  Profit or Loss for the Contract: $3867.27
+  Total Return Percentage: 135.22%
+
+Total Call Volume: 235.0
+Total Put Volume: 273.0
+Put/Call Ratio for GEV on 2025-01-17: 1.16
+Put/Call Ratio: 1.1617021276595745
 
 Current VIX Value: 13.51
 VIX Value: 13.510000228881836
 
 AI Analysis:
-The Put/Call Ratio of 1.52 indicates a bearish sentiment, as there are more puts being traded than calls. This suggests caution among investors regarding the future performance of EME. 
+The Put/Call ratio of 1.16 suggests neutral to mildly bearish sentiment in the market, indicating that slightly more put options have been traded than call options. This is not a strong indicator of optimism or pessimism, but rather shows a balanced market sentiment with a slight tilt towards caution.
 
-The VIX value of 13.51 is within the normal range, implying moderate market volatility and relatively stable conditions.
+The VIX value of 13.51 reflects normal market conditions with moderate volatility. This suggests that, while there's some uncertainty in the market, it's within normal limits and not at a level that should cause alarm.
 
-Over the last 90 days, EME has had more positive trading days (40) than negative ones (22), with average positive changes of 1.53% compared to average negative changes of -1.13%. This indicates a historically strong performance.
+Looking at the options Greeks, the Delta for both strike prices is around 0.5, indicative of at-the-money options. This means the options will move in roughly half the rate of the underlying stock. The Gamma values are low, suggesting that changes in the stock price won't cause sharp changes in Delta.
 
-Option Greeks show a Delta of 0.549371, meaning the option price is expected to increase by $0.55 for every $1.00 increase in the underlying stock price. The Vega of 0.726121 suggests the option price will increase by $0.73 for every 1% increase in market volatility, making it sensitive to changes in market conditions.
+Theta for both options is negative, which is standard as it represents time decay. However, the values are not extremely high, indicating that the options won't lose value rapidly over time. The Vega values for both options are moderate, indicating a certain degree of sensitivity to volatility changes but not to a significant extent.
 
-Conclusion: While EME has demonstrated strong historical performance, the bearish sentiment indicated by the Put/Call Ratio warrants caution. The decision to buy this option should consider your risk tolerance and confidence in EME's future growth.
+The historical stock performance shows a greater number of positive trading days than negative ones in the last 90 days. Furthermore, the average positive change (2.4%) is higher than the average negative change (-1.41%). This suggests that the stock has been relatively stable with a positive bias.
+
+Based on the available data, this call option for GEV seems to be a reasonable investment. The market conditions are normal, the stock has shown a tendency for positive returns, and the options Greeks do not show a high level of risk. However, due to the slightly bearish market sentiment, investors should remain vigilant for any changes in market conditions or the underlying stock's performance.
