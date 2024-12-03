@@ -453,21 +453,25 @@ def sentiment_analysis(put_call_ratio, vix_value):
     # Analyze put/call ratio
     # Analyze put/call ratio
     if put_call_ratio is not None:
-        if put_call_ratio < 1.0:
+        if put_call_ratio < 0.7:
             insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests bullish sentiment, indicating that more call options are traded than puts, reflecting optimism among investors."
+                f"The put/call ratio of {put_call_ratio:.2f} indicates bullish sentiment, suggesting optimism as more call options are traded compared to puts."
+            )
+        elif 0.7 <= put_call_ratio < 1.0:
+            insights.append(
+                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral to slightly bullish sentiment, indicating a balanced demand for puts and calls."
             )
         elif 1.0 <= put_call_ratio <= 1.5:
             insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral to mildly bearish sentiment, with a relatively balanced demand for puts and calls."
+                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral to mildly bearish sentiment, with increased caution or hedging behavior among investors."
             )
         elif 1.5 < put_call_ratio <= 2.0:
             insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests bearish sentiment, indicating more put options traded than calls, reflecting caution or a hedging behavior among investors."
+                f"The put/call ratio of {put_call_ratio:.2f} suggests bearish sentiment, with more put options traded than calls, reflecting investor caution."
             )
         else:  # Above 2.0
             insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} indicates strong bearish sentiment, suggesting heightened fear or hedging activity, with a significant preference for puts over calls."
+                f"The put/call ratio of {put_call_ratio:.2f} indicates strong bearish sentiment, suggesting heightened fear or significant hedging activity."
             )
 
     # Analyze VIX value
@@ -507,6 +511,8 @@ def get_ai_analysis(summary_data):
                 Interpret the data provided using the following context and guidelines:
 
                 - **Put/Call Ratio**:
+                - The put-call ratio is calculated by dividing the number of traded put options by the number of traded call options.
+                - 
                 - **Below 1.0**: Bullish sentiment; more call options traded, indicating optimism.
                 - **1.0 to 1.5**: Neutral to mildly bearish sentiment.
                 - **Above 1.5**: Bearish sentiment; more put options traded, indicating caution or fear.
