@@ -463,7 +463,7 @@ def sentiment_analysis(put_call_ratio, vix_value):
             )
         elif 1.0 <= put_call_ratio <= 1.5:
             insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral to mildly bearish sentiment, with increased caution or hedging behavior among investors."
+                f"The put/call ratio of {put_call_ratio:.2f} suggests mildly bearish sentiment, with increased caution or hedging behavior among investors."
             )
         elif 1.5 < put_call_ratio <= 2.0:
             insights.append(
@@ -511,11 +511,11 @@ def get_ai_analysis(summary_data):
                 Interpret the data provided using the following context and guidelines:
 
                 - **Put/Call Ratio**:
-                - The put-call ratio is calculated by dividing the number of traded put options by the number of traded call options.
+                - The put-call ratio measures market sentiment by dividing the number of traded put options by the number of traded call options.
                 - 
-                - **Below 1.0**: Bullish sentiment; more call options traded, indicating optimism.
-                - **1.0 to 1.5**: Neutral to mildly bearish sentiment.
-                - **Above 1.5**: Bearish sentiment; more put options traded, indicating caution or fear.
+                - **Equal to .07**: Nuetral sentiment; investors are balanced between put and call options.
+                - **Greater than 0.7, or exceeding 1**: means that equity traders are buying more puts than calls. It suggests that bearish sentiment is building in the market. Investors are either speculating that the market will move lower or are hedging their portfolios in case there is a sell-off.
+                - **Below .07**: A falling put-call ratio, or below 0.7 and approaching 0.5, is considered a bullish indicator. It means more calls are being bought versus puts.
 
                 - **VIX Value**:
                 - **Below 12**: Low market volatility, complacency.
