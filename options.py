@@ -457,17 +457,9 @@ def sentiment_analysis(put_call_ratio, vix_value):
             insights.append(
                 f"The put/call ratio of {put_call_ratio:.2f} indicates bullish sentiment, suggesting optimism as more call options are traded compared to puts."
             )
-        elif 0.7 <= put_call_ratio < 1.0:
+        elif put_call_ratio == .07:
             insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral to slightly bullish sentiment, indicating a balanced demand for puts and calls."
-            )
-        elif 1.0 <= put_call_ratio <= 1.5:
-            insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests mildly bearish sentiment, with increased caution or hedging behavior among investors."
-            )
-        elif 1.5 < put_call_ratio <= 2.0:
-            insights.append(
-                f"The put/call ratio of {put_call_ratio:.2f} suggests bearish sentiment, with more put options traded than calls, reflecting investor caution."
+                f"The put/call ratio of {put_call_ratio:.2f} suggests neutral sentiment, indicating more puts are being traded compared to calls."
             )
         else:  # Above 2.0
             insights.append(
