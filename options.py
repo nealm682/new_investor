@@ -6,6 +6,7 @@ import yfinance as yf
 import openai
 import re
 from datetime import datetime, timedelta
+import requests
 
 
 
@@ -24,6 +25,7 @@ load_dotenv()
 USERNAME = os.getenv("ROBINHOOD_USERNAME")
 PASSWORD = os.getenv("ROBINHOOD_PASSWORD")
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("GOOGLE_API_KEY")
 
 def login_to_robinhood():
     """
@@ -50,26 +52,24 @@ def fetch_current_price(symbol):
         print(f"Error fetching current price for {symbol}: {e}")
         return None
 
+
 def fetch_and_evaluate_greeks(symbol, expiration_date, option_type="call"):
     """
-    Fetches options data by symbol and expiration date, and evaluates Greeks.
-    Filters to show 2 in-the-money and 2 out-of-the-money options closest to the current price.
+    Fetches options data by symbol and expiration date, evaluates Greeks,
+    and calculates intrinsic and extrinsic values along with theta decay.
     """
     try:
         print(f"\nFetching {option_type} options for {symbol} expiring on {expiration_date}...")
         options = r.options.find_options_by_expiration(
-            inputSymbols=symbol, 
-            expirationDate=expiration_date, 
+            inputSymbols=symbol,
+            expirationDate=expiration_date,
             optionType=option_type
         )
-
-        #print(f"DEBUG: Raw options data: {options}")
 
         if not options:
             print("No options data found for the given parameters.")
             return
 
-        # Get current stock price
         current_price = fetch_current_price(symbol)
         if current_price is None:
             print("Unable to fetch the current price. Exiting.")
@@ -84,29 +84,21 @@ def fetch_and_evaluate_greeks(symbol, expiration_date, option_type="call"):
         itm_options = [opt for opt in options if float(opt['strike_price']) <= current_price]
         otm_options = [opt for opt in options if float(opt['strike_price']) > current_price]
 
-        # Select 2 closest in-the-money and 2 closest out-of-the-money options
-        #selected_options = (itm_options[-2:] if itm_options else []) + (otm_options[:2] if otm_options else [])
-        # Select the first in-the-money option
+        # Select closest options
         first_itm_option = itm_options[-1] if itm_options else None
-
-        # Select the first out-of-the-money option
         first_otm_option = otm_options[0] if otm_options else None
-
-        # Combine selected options
         selected_options = []
         if first_itm_option:
             selected_options.append(first_itm_option)
         if first_otm_option:
             selected_options.append(first_otm_option)
 
-        print(f"\nFiltering the first {option_type.capitalize()} Options 'in the money' for {symbol} (Expiration: {expiration_date}):")
+        print(f"\nSelected {option_type.capitalize()} Options for {symbol} (Expiration: {expiration_date}):")
         print("=" * 60)
 
-        # Fetch and display options and Greeks
+        # Analyze Greeks and calculate intrinsic/extrinsic values
         for option in selected_options:
-            strike_price = option.get('strike_price', 'N/A')
-
-            # Fetch detailed market data for Greeks
+            strike_price = float(option.get('strike_price', 'N/A'))
             market_data = r.options.get_option_market_data(
                 inputSymbols=symbol,
                 expirationDate=expiration_date,
@@ -114,31 +106,45 @@ def fetch_and_evaluate_greeks(symbol, expiration_date, option_type="call"):
                 optionType=option_type
             )
 
-            #print(f"DEBUG: Market data for strike price {strike_price}: {market_data}")
-
-            # Check if market_data is a nested list and extract Greeks
             if isinstance(market_data, list) and market_data:
                 first_entry = market_data[0][0] if isinstance(market_data[0], list) and market_data[0] else {}
                 delta = first_entry.get('delta', 'N/A')
                 gamma = first_entry.get('gamma', 'N/A')
-                theta = first_entry.get('theta', 'N/A')
+                theta = float(first_entry.get('theta', 0))
                 vega = first_entry.get('vega', 'N/A')
+                premium = float(first_entry.get('adjusted_mark_price', 0))
             else:
-                delta = gamma = theta = vega = 'N/A'
+                delta = gamma = theta = vega = premium = 'N/A'
 
-            #print(f"DEBUG: Greeks for strike price {strike_price}: Delta: {delta}, Gamma: {gamma}, Theta: {theta}, Vega: {vega}")
+            intrinsic_value = max(0, current_price - strike_price) if option_type == "call" else max(0, strike_price - current_price)
+            extrinsic_value = premium - intrinsic_value if premium != 'N/A' else 'N/A'
+            theta_decay_percentage = (abs(theta) / premium) * 100 if premium > 0 else 0
+            # Calculate intrinsic and extrinsic values in dollar amounts
+            intrinsic_value_dollar = intrinsic_value * 100
+            extrinsic_value_dollar = (premium * 100) - intrinsic_value_dollar if premium != 'N/A' else 'N/A'
+
+
 
             print(f"Strike Price: {strike_price}")
             print(f"  Delta: {delta}")
             print(f"  Gamma: {gamma}")
             print(f"  Theta: {theta}")
-            print(f"  Vega: {vega}\n")
+            print(f"  Vega: {vega}")
+            print(f"  Premium: {premium}")
+            print(f"  Intrinsic Value: {round(intrinsic_value, 2)}")
+            print(f"  Intrinsic Value (Dollar): ${round(intrinsic_value_dollar, 2)}")
+            print(f"  Extrinsic Value: {round(extrinsic_value, 2) if extrinsic_value != 'N/A' else 'N/A'}")
+            print(f"  Extrinsic Value (Dollar): ${round(extrinsic_value_dollar, 2) if extrinsic_value_dollar != 'N/A' else 'N/A'}")
+            print(f"  Theta Decay (%): {round(theta_decay_percentage, 2)}%\n")
 
-            return selected_options
-
+        return selected_options
 
     except Exception as e:
         print(f"Error fetching options data: {e}")
+
+
+
+
 
 def get_expiration_date_for_month(symbol, month):
     """ 
@@ -175,6 +181,8 @@ def get_expiration_date_for_month(symbol, month):
         return None
     
 
+
+
 def fetch_historical_closing_prices(symbol, span="3month"):
     """
     Fetches historical daily closing prices for the given stock ticker.
@@ -210,6 +218,9 @@ def fetch_historical_closing_prices(symbol, span="3month"):
         print(f"Error fetching historical closing prices for {symbol}: {e}")
         return []
     
+
+
+
 
 def analyze_daily_percentage_changes_90_days(historical_data):
     """
@@ -266,6 +277,10 @@ def analyze_daily_percentage_changes_90_days(historical_data):
     except Exception as e:
         return {"error": str(e)}
     
+
+
+
+
 def calculate_option_profit_or_loss(option_contract, percent_change):
     """
     Calculates the profit or loss for an options contract based on a given percentage change in the underlying stock price.
@@ -310,6 +325,8 @@ def calculate_option_profit_or_loss(option_contract, percent_change):
         return None
 
 
+
+
 def display_option_profit_or_loss(selected_options, percent_changes, symbol):
     """
     Displays the profit or loss for an options contract based on multiple percentage changes in the stock price.
@@ -349,6 +366,8 @@ def display_option_profit_or_loss(selected_options, percent_changes, symbol):
             print(f"  Profit or Loss for the Contract: ${result['profit_or_loss']}")
             total_return_percentage = (result['profit_or_loss'] / result['ask_price']) * 100
             print(f"  Total Return Percentage: {round(total_return_percentage, 2)}%\n")
+
+
 
 
 def get_put_call_ratio_60_days(symbol):
@@ -437,6 +456,90 @@ def get_vix_value():
         return None
 
 
+def fetch_google_news(ticker, api_key, cx):
+    """
+    Fetches recent stock news articles using the Google Custom Search JSON API.
+
+    Parameters:
+        ticker (str): Stock ticker symbol (e.g., "AAPL").
+        api_key (str): Your Google API key.
+        cx (str): Your Programmable Search Engine ID.
+
+    Returns:
+        list: A list of dictionaries containing article titles, links, and snippets.
+    """
+    url = "https://www.googleapis.com/customsearch/v1"
+    query = f"{ticker} stock news"  # Search query
+
+    params = {
+        "q": query,
+        "key": api_key,
+        "cx": cx,  # Include the Search Engine ID
+        "num": 5  # Fetch top 5 articles
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        results = response.json().get("items", [])
+        
+        # Parse and return relevant information
+        return [
+            {"title": item["title"], "link": item["link"], "snippet": item["snippet"]}
+            for item in results
+        ]
+    except Exception as e:
+        print(f"Error fetching news: {e}")
+        return []
+
+
+
+def analyze_sentiment_google_results(articles):
+    """
+    Performs sentiment analysis on Google Search results using OpenAI.
+
+    Parameters:
+        articles (list): A list of dictionaries containing article metadata.
+
+    Returns:
+        list: A list of articles with sentiment scores appended.
+    """
+    results = []
+
+    for article in articles:
+        try:
+            content = article["title"] + ". " + article["snippet"]
+                    # Create the chat completion using the client
+
+            response = openai.chat.completions.create(
+                model="gpt-4",  # Use "gpt-3.5-turbo" if "gpt-4" is unavailable
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an AI tasked with performing sentiment analysis. "
+                                   "Classify the sentiment of the provided text as positive, neutral, or negative."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Analyze the sentiment of this text: {content}"
+                    }
+                ],
+                max_tokens=150,
+                temperature=0.5
+            )
+
+
+            sentiment = response.choices[0].message.content
+            article["sentiment"] = sentiment
+            results.append(article)
+        except Exception as e:
+            print(f"Error analyzing sentiment: {e}")
+            continue
+
+    return results
+
+
+
 def sentiment_analysis(put_call_ratio, vix_value):
     """
     Analyzes sentiment indicators to provide trading insights.
@@ -503,7 +606,7 @@ def get_ai_analysis(summary_data):
                 Interpret the data provided using the following context and guidelines:
 
                 - **Put/Call Ratio**:
-                - The put-call ratio measures market sentiment by dividing the number of traded put options by the number of traded call options.
+                - The put-call ratio measures market sentiment by dividing the number of traded put options by the number of traded call options.  Low ratio numbers, like 0.2-0.3, suggest market sentiment is extremely bullish, while a reading over 1.2 suggests the market is becoming too bearish and may be due for a bounce. The put/call ratio is a very helpful tool in gauging whether the market outlook is bullish or bearish for a particular security or an index itself. 
                 - 
                 - **Equal to .07**: Nuetral sentiment; investors are balanced between put and call options.
                 - **Greater than 0.7, or exceeding 1**: means that equity traders are buying more puts than calls. It suggests that bearish sentiment is building in the market. Investors are either speculating that the market will move lower or are hedging their portfolios in case there is a sell-off.
@@ -619,6 +722,26 @@ def main():
             print(f"  Negative Days: {analysis['negative_days']}")
             print(f"  Average Negative Change: {analysis['average_negative_change']}%")
 
+
+
+        # Fetch News Articles and Analyze Sentiment
+        api_key = os.getenv("GOOGLE_API_KEY")
+        cx = os.getenv("GOOGLE_CX")
+        print(f"\nFetching recent news for {symbol}...")
+        articles = fetch_google_news(symbol, api_key, cx)
+
+        if articles:
+            print("\nAnalyzing news sentiment...")
+            analyzed_articles = analyze_sentiment_google_results(articles)
+            print("\nNews Sentiment Analysis:")
+            for article in analyzed_articles:
+                print(f"Title: {article['title']}")
+                print(f"Sentiment: {article['sentiment']}")
+                print(f"URL: {article['link']}\n")
+        else:
+            print("No news articles found.")
+
+
         percent_change = [1, 10, 20]
         display_option_profit_or_loss(selected_options, percent_change, symbol)
 
@@ -678,6 +801,21 @@ Historical Price Analysis (Last 90 Days):
         Put/Call Ratio: {put_call_ratio if put_call_ratio is not None else 'N/A'}
         VIX Value: {vix_value if vix_value is not None else 'N/A'}
         """
+
+
+        # Include news sentiment analysis
+        if articles:
+            analyzed_articles = analyze_sentiment_google_results(articles)
+            news_summary = "\nNews Sentiment Analysis:\n"
+            for article in analyzed_articles:
+                news_summary += f"Title: {article['title']}\n"
+                news_summary += f"Sentiment: {article['sentiment']}\n"
+                news_summary += f"URL: {article['link']}\n\n"
+            summary_data += news_summary
+        else:
+            summary_data += "\nNews Sentiment Analysis:\nNo recent news articles found.\n"
+
+
 
         # Include profit or loss estimation
         if profit_loss_result:
