@@ -78,5 +78,5 @@ You can reference the `robin-stocks` package at: [robin-stocks GitHub](https://g
 
 To start the application, execute the following command:
 ```bash
-streamlit run options1.py
+streamlit run options1.py [ARGUMENTS]
 
