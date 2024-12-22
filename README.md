@@ -72,6 +72,9 @@ You can reference the `robin-stocks` package at: [robin-stocks GitHub](https://g
     ROBINHOOD_USERNAME=your_username
     ROBINHOOD_PASSWORD=your_password
     OPENAI_API_KEY=your_openai_api_key
+    GOOGLE_API_KEY=your_google_api_key       # Optional, if using Google Search
+    GOOGLE_CX=your_google_custom_search_id   # Optional, if using Google Search
+
     ```
 
 ### Run the Program
