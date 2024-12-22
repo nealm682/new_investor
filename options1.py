@@ -27,6 +27,40 @@ profit_loss_result = None
 
 
 def main():
+    # -----------------------
+    # SIDEBAR FOR CREDENTIALS
+    # -----------------------
+    with st.sidebar:
+        st.subheader("Enter Your Credentials")
+
+        # 1) Robinhood
+        st.markdown("**Robinhood** – [https://robinhood.com/](https://robinhood.com/)")
+        rh_username = st.text_input("Robinhood Username", "", key="rh_user")
+        rh_password = st.text_input("Robinhood Password", "", type="password", key="rh_pass")
+
+        # 2) OpenAI
+        st.markdown("**OpenAI** – [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)")
+        openai_api_key = st.text_input("OpenAI API Key", "", type="password", key="openai_api")
+
+        # 3) Google Search (Custom Search Engine)
+        st.markdown("**Google API** – [https://developers.google.com/custom-search/v1/introduction](https://developers.google.com/custom-search/v1/introduction)")
+        google_api_key = st.text_input("Google API Key", "", key="google_api")
+
+        st.markdown("**Google CX** – [https://programmablesearchengine.google.com/controlpanel/all](https://programmablesearchengine.google.com/controlpanel/all)")
+        google_cx = st.text_input("Google CX", "", key="google_cx")
+
+        if st.button("Save Credentials"):
+            os.environ["ROBINHOOD_USERNAME"] = rh_username
+            os.environ["ROBINHOOD_PASSWORD"] = rh_password
+            os.environ["OPENAI_API_KEY"] = openai_api_key
+            os.environ["GOOGLE_API_KEY"] = google_api_key
+            os.environ["GOOGLE_CX"] = google_cx
+
+            st.success("Credentials saved to environment variables.")
+
+    # -----------------------
+    # MAIN TITLE
+    # -----------------------
     st.title("Robinhood Options Analysis")
 
     # 1. Automatic login to Robinhood upon app launch
@@ -148,10 +182,6 @@ def main():
             # 5e) Display Option Profit or Loss
             st.write("#### Estimated Profit or Loss for Various % Changes:")
             percent_change = [1, 10, 20]
-            # display_option_profit_or_loss can be adapted to accept a print-like function
-            # or we manually read its return. For example, if it prints internally, you'd
-            # change it to st.write. We'll assume it prints or returns strings.
-
             display_option_profit_or_loss(selected_options, percent_change, symbol)
 
             # 5f) Put/Call Ratio
@@ -248,3 +278,4 @@ if __name__ == "__main__":
         st.session_state["expiration_dates"] = []
 
     main()
+

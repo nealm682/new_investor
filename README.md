@@ -69,11 +69,11 @@ You can reference the `robin-stocks` package at: [robin-stocks GitHub](https://g
 
 4. Create a `.env` file in the root directory and add your credentials and API keys:
     ```plaintext
-    ROBINHOOD_USERNAME=your_username
-    ROBINHOOD_PASSWORD=your_password
-    OPENAI_API_KEY=your_openai_api_key
-    GOOGLE_API_KEY=your_google_api_key       # Optional, if using Google Search
-    GOOGLE_CX=your_google_custom_search_id   # Optional, if using Google Search
+    ROBINHOOD_USERNAME=your_username         # https://robinhood.com/
+    ROBINHOOD_PASSWORD=your_password         # https://robinhood.com/
+    OPENAI_API_KEY=your_openai_api_key       # https://platform.openai.com/api-keys
+    GOOGLE_API_KEY=your_google_api_key       # https://developers.google.com/custom-search/v1/introduction
+    GOOGLE_CX=your_google_custom_search_id   # https://programmablesearchengine.google.com/controlpanel/all
 
     ```
 
